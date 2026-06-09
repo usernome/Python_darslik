@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python interaktiv elektron darslik</title>
+<style>
+:root{
+  --bg:#eaf4fb;
+  --bg2:#dcecf8;
+  --panel:#ffffff;
+  --panel2:#f0f7fc;
+  --line:#c4ddf0;
+  --txt:#1b3a52;
+  --muted:#5d7c93;
+  --py-blue:#2196d6;
+  --py-yellow:#1ca6e0;
+  --green:#1aa86a;
+  --red:#e0484c;
+  --accent:#2196d6;
+  --code-bg:#0d2436;
+  --radius:14px;
+  --shadow:0 8px 30px rgba(33,150,214,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Segoe UI','Helvetica Neue',system-ui,sans-serif;
+  background:
+     radial-gradient(900px 500px at 85% -5%, rgba(33,150,214,.20), transparent),
+     radial-gradient(700px 400px at -10% 110%, rgba(28,166,224,.14), transparent),
+     var(--bg);
+  color:var(--txt);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+code,pre,.mono{font-family:'JetBrains Mono','Consolas','Courier New',monospace}
+
+/* ===== Layout ===== */
+.app{display:flex;min-height:100vh}
+.sidebar{
+  width:280px;flex-shrink:0;background:var(--bg2);
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;
+}
+.brand{padding:22px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;cursor:pointer}
+.brand .logo{
+  width:42px;height:42px;border-radius:11px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--py-blue),#1370a8);
+  display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;
+  box-shadow:0 4px 14px rgba(33,150,214,.4);
+}
+.brand .logo img{width:100%;height:100%;object-fit:cover;display:block}
+.brand h1{font-size:15px;font-weight:700;letter-spacing:.2px}
+.brand span{font-size:11px;color:var(--muted);display:block;font-weight:400}
+.nav{padding:14px 12px;overflow-y:auto;flex:1}
+.nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:14px 12px 8px}
+.nav a{
+  display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:10px;
+  color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:500;
+  cursor:pointer;transition:.18s;margin-bottom:2px;
+}
+.nav a:hover{background:var(--panel);color:var(--txt)}
+.nav a.active{background:linear-gradient(90deg,rgba(75,139,190,.22),transparent);color:var(--txt);box-shadow:inset 3px 0 0 var(--py-blue)}
+.nav a .ic{font-size:16px;width:20px;text-align:center}
+.progress-box{padding:16px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.progress-bar{height:7px;border-radius:6px;background:var(--panel);overflow:hidden;margin-top:8px}
+.progress-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--py-blue),var(--py-yellow));transition:.4s}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  height:60px;border-bottom:1px solid var(--line);background:rgba(234,244,251,.8);
+  backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:0 26px;
+  position:sticky;top:0;z-index:20;
+}
+.topbar .menu-btn{display:none;background:var(--panel);border:1px solid var(--line);color:var(--txt);width:38px;height:38px;border-radius:9px;cursor:pointer;font-size:18px}
+.topbar .crumb{font-size:14px;color:var(--muted)}
+.topbar .crumb b{color:var(--txt)}
+.topbar .spacer{flex:1}
+.btn{
+  border:none;cursor:pointer;font:inherit;font-weight:600;border-radius:10px;
+  padding:9px 16px;font-size:13.5px;transition:.18s;display:inline-flex;align-items:center;gap:7px;
+}
+.btn-pri{background:var(--py-blue);color:#fff}
+.btn-pri:hover{background:#5a9bce;transform:translateY(-1px)}
+.btn-acc{background:var(--py-yellow);color:#fff}
+.btn-acc:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-gh{background:var(--panel);color:var(--txt);border:1px solid var(--line)}
+.btn-gh:hover{background:var(--panel2)}
+.content{padding:32px 38px 60px;max-width:1100px;width:100%;margin:0 auto;flex:1}
+
+.fade{animation:fade .4s ease}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+h2.page-title{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-.4px}
+.page-sub{color:var(--muted);margin-bottom:26px;font-size:14.5px}
+
+/* ===== Home ===== */
+.hero{
+  background:linear-gradient(135deg,var(--panel),var(--bg2));
+  border:1px solid var(--line);border-radius:20px;padding:44px 40px;position:relative;overflow:hidden;
+  margin-bottom:30px;
+}
+.hero::after{content:"</>";position:absolute;right:-10px;bottom:-30px;font-size:170px;font-family:'JetBrains Mono',monospace;color:rgba(33,150,214,.10);font-weight:700}
+.hero h3{font-size:30px;font-weight:800;letter-spacing:-.5px;margin-bottom:12px;max-width:600px}
+.hero h3 .y{color:var(--py-yellow)}
+.hero p{color:var(--muted);max-width:560px;font-size:15px;margin-bottom:24px}
+.hero .row{display:flex;gap:12px;flex-wrap:wrap}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;
+  cursor:pointer;transition:.2s;position:relative;overflow:hidden;
+}
+.card:hover{transform:translateY(-3px);border-color:var(--py-blue);box-shadow:var(--shadow)}
+.card .cic{font-size:26px;margin-bottom:12px;display:block}
+.card h4{font-size:16px;margin-bottom:5px}
+.card p{font-size:13px;color:var(--muted)}
+.card .badge{position:absolute;top:14px;right:14px;font-size:11px;background:var(--bg);border:1px solid var(--line);padding:3px 9px;border-radius:20px;color:var(--muted)}
+
+/* ===== Topics list ===== */
+.topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.topic-item{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px 18px 18px;
+  cursor:pointer;transition:.18s;display:flex;gap:14px;align-items:flex-start;
+}
+.topic-item:hover{border-color:var(--py-blue);background:var(--panel2)}
+.topic-num{
+  width:34px;height:34px;flex-shrink:0;border-radius:9px;background:var(--bg);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--py-yellow);
+  font-family:'JetBrains Mono',monospace;
+}
+.topic-item.done .topic-num{background:var(--green);color:#fff;border-color:var(--green)}
+.topic-item h4{font-size:14.5px;margin-bottom:3px}
+.topic-item small{color:var(--muted);font-size:12px}
+.topic-item .check{margin-left:auto;color:var(--green);font-size:18px;opacity:0}
+.topic-item.done .check{opacity:1}
+
+/* ===== Lesson view ===== */
+.lesson-head{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.lesson-head .tn{font-family:'JetBrains Mono',monospace;color:var(--py-yellow);font-size:15px;background:var(--panel);padding:5px 11px;border-radius:8px;border:1px solid var(--line)}
+.theory{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px 28px;margin:20px 0}
+.theory p{margin-bottom:12px;font-size:15px}
+.theory ul{margin:8px 0 14px 22px}
+.theory li{margin-bottom:6px}
+.theory b{color:var(--py-yellow)}
+.sec-tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);font-weight:700;margin:26px 0 10px}
+.sec-tag .d{width:8px;height:8px;border-radius:50%;background:var(--py-blue)}
+
+.codeblock{background:var(--code-bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:8px 0 6px}
+.codeblock .cb-head{display:flex;align-items:center;gap:7px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.codeblock .dot{width:11px;height:11px;border-radius:50%}
+.codeblock .cb-head .t{margin-left:8px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.codeblock .cb-head .copy{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:3px 8px;border-radius:6px}
+.codeblock .cb-head .copy:hover{background:var(--panel);color:var(--txt)}
+.codeblock pre{padding:16px 18px;overflow-x:auto;font-size:13.5px;line-height:1.7}
+.codeblock pre code{white-space:pre}
+.kw{color:#ff7b72}.str{color:#a5d6ff}.num{color:#79c0ff}.com{color:#8b949e;font-style:italic}.fn{color:#d2a8ff}.bi{color:#ffa657}
+.output{background:#0b1f12;border:1px solid #1e4d2b;border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:11px 16px;margin-top:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:#9fe0ad}
+.output .lbl{color:var(--green);font-size:11px;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px;font-family:'Segoe UI',sans-serif}
+.note{font-size:13.5px;color:var(--muted);margin-top:8px;padding-left:14px;border-left:2px solid var(--line)}
+
+.task{background:linear-gradient(135deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:12px 0;display:flex;gap:14px}
+.task .qm{font-size:22px}
+.task h5{font-size:14px;margin-bottom:4px;color:var(--py-yellow)}
+.task p{font-size:14px;color:var(--txt)}
+
+.lesson-foot{display:flex;justify-content:space-between;align-items:center;margin-top:32px;padding-top:22px;border-top:1px solid var(--line)}
+.lesson-nav{display:flex;gap:10px}
+
+/* ===== Tests ===== */
+.test-intro{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+.quiz-q{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:14px}
+.quiz-q .qn{font-size:12px;color:var(--py-blue);font-weight:700;letter-spacing:.5px}
+.quiz-q .qt{font-size:15.5px;font-weight:600;margin:6px 0 16px}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 15px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;cursor:pointer;transition:.15s;font-size:14px}
+.opt:hover{border-color:var(--py-blue);background:var(--panel2)}
+.opt .rd{width:18px;height:18px;border-radius:50%;border:2px solid var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.opt.sel{border-color:var(--py-blue);background:rgba(75,139,190,.12)}
+.opt.sel .rd{border-color:var(--py-blue)}
+.opt.sel .rd::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--py-blue)}
+.opt.correct{border-color:var(--green);background:rgba(63,185,80,.13)}
+.opt.wrong{border-color:var(--red);background:rgba(248,81,73,.13)}
+.opt.correct .rd{border-color:var(--green);background:var(--green)}
+.opt.wrong .rd{border-color:var(--red);background:var(--red)}
+.opt .mk{margin-left:auto;font-size:16px}
+
+/* result */
+.result-card{text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:40px;margin-bottom:20px}
+.ring{width:150px;height:150px;margin:0 auto 18px;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .pct b{font-size:36px;font-weight:800}
+.ring .pct span{font-size:12px;color:var(--muted)}
+.res-msg{font-size:18px;font-weight:700;margin-bottom:6px}
+.res-stats{display:flex;justify-content:center;gap:30px;margin-top:18px;flex-wrap:wrap}
+.res-stats div{text-align:center}
+.res-stats b{font-size:22px;display:block}
+.res-stats small{color:var(--muted);font-size:12px}
+
+/* ===== Code editor ===== */
+.editor-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ed-panel{background:var(--code-bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.ed-panel .ph{padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg2);font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:7px}
+.ed-panel textarea{flex:1;min-height:300px;background:transparent;border:none;outline:none;color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:13.5px;padding:14px 16px;resize:vertical;line-height:1.6;tab-size:4}
+.ed-out{padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:13px;white-space:pre-wrap;min-height:300px;color:#9fe0ad;overflow:auto}
+.ed-out .err{color:var(--red)}
+.ed-toolbar{display:flex;gap:10px;margin:14px 0;flex-wrap:wrap;align-items:center}
+.sample-pick{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:9px 12px;font:inherit;font-size:13px}
+
+/* guide */
+.guide-step{display:flex;gap:16px;margin-bottom:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.guide-step .gnum{width:32px;height:32px;flex-shrink:0;border-radius:9px;background:var(--py-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.guide-step h4{font-size:15px;margin-bottom:3px}
+.guide-step p{font-size:14px;color:var(--muted)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--panel2);border:1px solid var(--line);padding:13px 22px;border-radius:11px;box-shadow:var(--shadow);font-size:14px;opacity:0;transition:.3s;z-index:100}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30}
+@media(max-width:880px){
+  .sidebar{position:fixed;left:0;top:0;z-index:40;transform:translateX(-100%);transition:.3s}
+  .sidebar.open{transform:none}
+  .overlay.open{display:block}
+  .topbar .menu-btn{display:flex;align-items:center;justify-content:center}
+  .content{padding:22px 18px 50px}
+  .editor-wrap{grid-template-columns:1fr}
+  .ed-panel textarea,.ed-out{min-height:220px}
+  .hero{padding:30px 24px}
+  .hero h3{font-size:23px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand" onclick="go('home')">
+      <div class="logo"><img src="logo.png" alt="logo" onerror="this.style.display='none';this.parentElement.textContent='🐍'"></div>
+      <div>
+        <h1>Python Darslik</h1>
+        <span>Interaktiv elektron o‘quv muhiti</span>
+      </div>
+    </div>
+    <nav class="nav" id="navList"></nav>
+    <div class="progress-box">
+      <div style="display:flex;justify-content:space-between"><span>O‘zlashtirish</span><b id="progPct" style="color:var(--txt)">0%</b></div>
+      <div class="progress-bar"><i id="progBar" style="width:0%"></i></div>
+      <div style="margin-top:6px;font-size:11px"><span id="progTxt">0 / 0 mavzu yakunlandi</span></div>
+    </div>
+  </aside>
+  <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" onclick="toggleMenu()">☰</button>
+      <div class="crumb" id="crumb">Bosh sahifa</div>
+      <div class="spacer"></div>
+      <button class="btn btn-gh" onclick="resetAll()" title="Barcha saqlangan ma'lumotlarni o'chirish">↺ Tozalash</button>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   MA'LUMOTLAR (TEXNIK TOPSHIRIQ ASOSIDA)
+   ============================================================ */
+const TOPICS = [
+  {id:'t1',t:'Python haqida umumiy tushuncha',s:'Python tili, tarixi va imkoniyatlari',
+   theory:`<p><b>Python</b> — bu o‘qish va yozish oson, yuqori darajadagi dasturlash tili. U 1991-yilda Gvido van Rossum tomonidan yaratilgan.</p>
+   <p>Python sodda sintaksisga ega bo‘lib, sun’iy intellekt, veb-dasturlash, ma’lumotlar tahlili, avtomatlashtirish kabi sohalarda keng qo‘llaniladi.</p>
+   <ul><li>Sintaksisi <b>sodda va tushunarli</b></li><li>Ko‘plab tayyor kutubxonalarga ega</li><li>Kross-platforma (Windows, Linux, macOS)</li></ul>`,
+   code:`<span class="com"># Birinchi Python dasturi</span>\n<span class="fn">print</span>(<span class="str">"Salom, Python dunyosi!"</span>)`,
+   out:`Salom, Python dunyosi!`, note:'print() funksiyasi ekranga matn chiqarish uchun ishlatiladi.',
+   task:'"Men Python o‘rganyapman" matnini ekranga chiqaruvchi dastur yozing.'},
+
+  {id:'t2',t:'Python muhitida ishlash',s:'IDLE, kod yozish va ishga tushirish',
+   theory:`<p>Python kodini yozish uchun <b>IDLE</b>, <b>PyCharm</b>, <b>VS Code</b> kabi muhitlardan foydalaniladi. Kod <b>.py</b> kengaytmali faylda saqlanadi.</p>
+   <p>Dastur ikki rejimda ishlaydi: <b>interaktiv rejim</b> (buyruq darhol bajariladi) va <b>skript rejim</b> (fayl to‘liq ishga tushiriladi).</p>`,
+   code:`<span class="com"># Izoh (comment) — # belgisidan keyin yoziladi</span>\n<span class="fn">print</span>(<span class="str">"Dastur ishga tushdi"</span>)  <span class="com"># bu satr bajariladi</span>`,
+   out:`Dastur ishga tushdi`, note:'# belgisi izoh yozish uchun ishlatiladi va kodga ta’sir qilmaydi.',
+   task:'Ismingizni va yoshingizni ikki alohida print() bilan chiqaring.'},
+
+  {id:'t3',t:'Ma’lumotlarni ekranga chiqarish',s:'print() funksiyasi va formatlash',
+   theory:`<p><b>print()</b> funksiyasi ma’lumotlarni ekranga chiqaradi. Bir nechta qiymatni vergul bilan ajratib chiqarish mumkin.</p>
+   <p>Matnlarni birlashtirish uchun <b>f-string</b> yoki <b>+</b> belgisidan foydalaniladi.</p>`,
+   code:`ism = <span class="str">"Ali"</span>\nyosh = <span class="num">20</span>\n<span class="fn">print</span>(<span class="str">"Ism:"</span>, ism, <span class="str">"Yosh:"</span>, yosh)\n<span class="fn">print</span>(<span class="str">f"Mening ismim {ism}, yoshim {yosh}"</span>)`,
+   out:`Ism: Ali Yosh: 20\nMening ismim Ali, yoshim 20`, note:'f-string ichida {} qavslar orasiga o‘zgaruvchi yoziladi.',
+   task:'f-string yordamida "Bugun harorat 25 daraja" jumlasini chiqaring (haroratni o‘zgaruvchida saqlang).'},
+
+  {id:'t4',t:'O‘zgaruvchilar',s:'Qiymat saqlash va nomlash qoidalari',
+   theory:`<p><b>O‘zgaruvchi</b> — bu qiymat saqlanadigan nomlangan joy. Python’da o‘zgaruvchi <b>= belgisi</b> orqali e’lon qilinadi.</p>
+   <ul><li>Nom harf yoki _ bilan boshlanadi</li><li>Probel ishlatilmaydi</li><li>Katta-kichik harf farqlanadi</li></ul>`,
+   code:`x = <span class="num">10</span>\nnom = <span class="str">"Python"</span>\npi = <span class="num">3.14</span>\nfaol = <span class="kw">True</span>\n<span class="fn">print</span>(x, nom, pi, faol)`,
+   out:`10 Python 3.14 True`, note:'Bir o‘zgaruvchiga turli turdagi qiymatlar berish mumkin.',
+   task:'Ikkita son o‘zgaruvchisini e’lon qiling va ularning yig‘indisini chiqaring.'},
+
+  {id:'t5',t:'Ma’lumot turlari',s:'int, float, str, bool',
+   theory:`<p>Python’da asosiy ma’lumot turlari: <b>int</b> (butun son), <b>float</b> (kasr son), <b>str</b> (matn), <b>bool</b> (rost/yolg‘on).</p>
+   <p><b>type()</b> funksiyasi qiymat turini aniqlaydi.</p>`,
+   code:`<span class="fn">print</span>(<span class="fn">type</span>(<span class="num">5</span>))\n<span class="fn">print</span>(<span class="fn">type</span>(<span class="num">3.14</span>))\n<span class="fn">print</span>(<span class="fn">type</span>(<span class="str">"matn"</span>))\n<span class="fn">print</span>(<span class="fn">type</span>(<span class="kw">True</span>))`,
+   out:`<class 'int'>\n<class 'float'>\n<class 'str'>\n<class 'bool'>`, note:'int() va str() yordamida turlarni o‘zgartirish mumkin.',
+   task:'Bir matn ko‘rinishidagi sonni int() bilan songa aylantirib, 5 ga ko‘paytiring.'},
+
+  {id:'t6',t:'Arifmetik amallar',s:'Hisoblash operatorlari',
+   theory:`<p>Python arifmetik amallar: <b>+</b> qo‘shish, <b>-</b> ayirish, <b>*</b> ko‘paytirish, <b>/</b> bo‘lish, <b>//</b> butun bo‘lish, <b>%</b> qoldiq, <b>**</b> daraja.</p>`,
+   code:`a = <span class="num">17</span>\nb = <span class="num">5</span>\n<span class="fn">print</span>(<span class="str">"Yig‘indi:"</span>, a + b)\n<span class="fn">print</span>(<span class="str">"Bo‘linma:"</span>, a / b)\n<span class="fn">print</span>(<span class="str">"Qoldiq:"</span>, a % b)\n<span class="fn">print</span>(<span class="str">"Daraja:"</span>, a ** <span class="num">2</span>)`,
+   out:`Yig‘indi: 22\nBo‘linma: 3.4\nQoldiq: 2\nDaraja: 289`, note:'/ doim float natija beradi, // esa butun qism.',
+   task:'Foydalanuvchidan ikki son olib (yoki o‘zgaruvchida saqlab) ularning o‘rtacha qiymatini chiqaring.'},
+
+  {id:'t7',t:'Shart operatorlari',s:'if, elif, else',
+   theory:`<p><b>Shart operatori</b> ma’lum bir shart bajarilganda kodni ishga tushiradi. Python’da <b>if</b>, <b>elif</b>, <b>else</b> ishlatiladi.</p>
+   <p>Bloklar <b>otступ (indentatsiya)</b> bilan ajratiladi.</p>`,
+   code:`yosh = <span class="num">18</span>\n<span class="kw">if</span> yosh >= <span class="num">18</span>:\n    <span class="fn">print</span>(<span class="str">"Voyaga yetgan"</span>)\n<span class="kw">elif</span> yosh >= <span class="num">13</span>:\n    <span class="fn">print</span>(<span class="str">"O‘smir"</span>)\n<span class="kw">else</span>:\n    <span class="fn">print</span>(<span class="str">"Bola"</span>)`,
+   out:`Voyaga yetgan`, note:'Indentatsiya (4 probel) Python’da majburiy hisoblanadi.',
+   task:'Bir sonni tekshirib, u musbat, manfiy yoki nol ekanini aniqlovchi dastur yozing.'},
+
+  {id:'t8',t:'Takrorlash operatorlari',s:'for va while sikllari',
+   theory:`<p><b>Sikllar</b> kodni bir necha marta takrorlaydi. <b>for</b> ma’lum oraliqda, <b>while</b> shart rost bo‘lguncha ishlaydi.</p>
+   <p><b>range()</b> funksiyasi sonlar ketma-ketligini hosil qiladi.</p>`,
+   code:`<span class="com"># for sikli</span>\n<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="num">4</span>):\n    <span class="fn">print</span>(<span class="str">"Qadam"</span>, i)\n\n<span class="com"># while sikli</span>\nn = <span class="num">3</span>\n<span class="kw">while</span> n > <span class="num">0</span>:\n    <span class="fn">print</span>(n)\n    n -= <span class="num">1</span>`,
+   out:`Qadam 1\nQadam 2\nQadam 3\n3\n2\n1`, note:'range(1,4) → 1,2,3 (4 kirmaydi).',
+   task:'1 dan 10 gacha bo‘lgan sonlarning yig‘indisini for sikli yordamida hisoblang.'},
+
+  {id:'t9',t:'Ro‘yxatlar (List)',s:'Ma’lumotlar to‘plami bilan ishlash',
+   theory:`<p><b>Ro‘yxat (list)</b> — bir nechta qiymatni saqlovchi tartiblangan to‘plam. Kvadrat qavs <b>[ ]</b> ichida yoziladi.</p>
+   <p>Elementlarga <b>indeks</b> (0 dan boshlanadi) orqali murojaat qilinadi.</p>`,
+   code:`mevalar = [<span class="str">"olma"</span>, <span class="str">"banan"</span>, <span class="str">"uzum"</span>]\n<span class="fn">print</span>(mevalar[<span class="num">0</span>])\nmevalar.<span class="fn">append</span>(<span class="str">"shaftoli"</span>)\n<span class="fn">print</span>(mevalar)\n<span class="fn">print</span>(<span class="str">"Soni:"</span>, <span class="fn">len</span>(mevalar))`,
+   out:`olma\n['olma', 'banan', 'uzum', 'shaftoli']\nSoni: 4`, note:'append() ro‘yxat oxiriga element qo‘shadi, len() uzunligini beradi.',
+   task:'5 ta sondan iborat ro‘yxat yarating va ularning eng kattasini max() bilan toping.'},
+
+  {id:'t10',t:'Matnlar bilan ishlash',s:'String metodlari',
+   theory:`<p><b>String (matn)</b> — belgilar ketma-ketligi. Ko‘plab foydali metodlarga ega: <b>upper()</b>, <b>lower()</b>, <b>replace()</b>, <b>split()</b>.</p>`,
+   code:`matn = <span class="str">"Python Dasturlash"</span>\n<span class="fn">print</span>(matn.<span class="fn">upper</span>())\n<span class="fn">print</span>(matn.<span class="fn">lower</span>())\n<span class="fn">print</span>(matn.<span class="fn">replace</span>(<span class="str">"Python"</span>, <span class="str">"Java"</span>))\n<span class="fn">print</span>(<span class="fn">len</span>(matn))`,
+   out:`PYTHON DASTURLASH\npython dasturlash\nJava Dasturlash\n17`, note:'split() matnni so‘zlarga ajratib ro‘yxat qaytaradi.',
+   task:'Bir jumlani oling va undagi so‘zlar sonini split() yordamida aniqlang.'},
+
+  {id:'t11',t:'Funksiyalar',s:'def yordamida funksiya yaratish',
+   theory:`<p><b>Funksiya</b> — ma’lum vazifani bajaruvchi qayta ishlatiladigan kod bloki. <b>def</b> kalit so‘zi bilan e’lon qilinadi.</p>
+   <p><b>return</b> funksiya natijasini qaytaradi.</p>`,
+   code:`<span class="kw">def</span> <span class="fn">salom</span>(ism):\n    <span class="kw">return</span> <span class="str">f"Salom, {ism}!"</span>\n\n<span class="kw">def</span> <span class="fn">kvadrat</span>(x):\n    <span class="kw">return</span> x * x\n\n<span class="fn">print</span>(<span class="fn">salom</span>(<span class="str">"Olim"</span>))\n<span class="fn">print</span>(<span class="fn">kvadrat</span>(<span class="num">6</span>))`,
+   out:`Salom, Olim!\n36`, note:'Funksiya argument qabul qilishi va qiymat qaytarishi mumkin.',
+   task:'Ikki sonning ko‘paytmasini qaytaruvchi funksiya yozing va uni sinab ko‘ring.'},
+
+  {id:'t12',t:'Fayllar bilan ishlash',s:'open, read, write',
+   theory:`<p>Python <b>open()</b> funksiyasi yordamida fayllarni ochadi. Rejimlar: <b>"r"</b> o‘qish, <b>"w"</b> yozish, <b>"a"</b> qo‘shish.</p>
+   <p><b>with</b> bloki faylni avtomatik yopadi.</p>`,
+   code:`<span class="com"># Faylga yozish</span>\n<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"fayl.txt"</span>, <span class="str">"w"</span>) <span class="kw">as</span> f:\n    f.<span class="fn">write</span>(<span class="str">"Salom!"</span>)\n\n<span class="com"># Fayldan o‘qish</span>\n<span class="kw">with</span> <span class="fn">open</span>(<span class="str">"fayl.txt"</span>, <span class="str">"r"</span>) <span class="kw">as</span> f:\n    <span class="fn">print</span>(f.<span class="fn">read</span>())`,
+   out:`Salom!`, note:'with bloki faylni xavfsiz ochib, ishi tugagach avtomatik yopadi.',
+   task:'Bir faylga 3 qator matn yozib, keyin uni o‘qib ekranga chiqaruvchi dastur tuzing.'},
+
+  {id:'t13',t:'Kichik amaliy dasturlar',s:'O‘rganilganlarni birlashtirish',
+   theory:`<p>Endi o‘rganganlaringizni birlashtirib kichik dasturlar yozamiz. Quyida <b>kalkulyator</b> va <b>juft/toq tekshiruvchi</b> misollari berilgan.</p>`,
+   code:`<span class="kw">def</span> <span class="fn">kalkulyator</span>(a, b, amal):\n    <span class="kw">if</span> amal == <span class="str">"+"</span>:\n        <span class="kw">return</span> a + b\n    <span class="kw">elif</span> amal == <span class="str">"*"</span>:\n        <span class="kw">return</span> a * b\n    <span class="kw">return</span> <span class="str">"Noma'lum amal"</span>\n\n<span class="fn">print</span>(<span class="fn">kalkulyator</span>(<span class="num">6</span>, <span class="num">4</span>, <span class="str">"+"</span>))\n\n<span class="kw">for</span> n <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="num">5</span>):\n    tur = <span class="str">"juft"</span> <span class="kw">if</span> n % <span class="num">2</span> == <span class="num">0</span> <span class="kw">else</span> <span class="str">"toq"</span>\n    <span class="fn">print</span>(n, tur)`,
+   out:`10\n1 toq\n2 juft\n3 toq\n4 juft`, note:'Funksiya, shart va siklni birlashtirib murakkabroq mantiq quriladi.',
+   task:'Foydalanuvchidan ism so‘rab, uni salomlashtiruvchi va yoshiga qarab kategoriya aniqlovchi to‘liq dastur tuzing.'}
+];
+
+const QUIZ = [
+  {q:'Python qaysi yilda yaratilgan?',o:['1991','2005','1985','2010'],a:0},
+  {q:'Ekranga matn chiqarish uchun qaysi funksiya ishlatiladi?',o:['input()','print()','show()','echo()'],a:1},
+  {q:'Izoh (comment) qaysi belgi bilan yoziladi?',o:['//','/* */','#','--'],a:2},
+  {q:'Butun sonlar turi qanday nomlanadi?',o:['str','float','int','bool'],a:2},
+  {q:'Qaysi operator qoldiqni topadi?',o:['%','//','**','/'],a:0},
+  {q:'Shart operatorida "aks holda" qaysi kalit so‘z bilan yoziladi?',o:['elif','else','then','endif'],a:1},
+  {q:'range(1, 4) qaysi sonlarni beradi?',o:['1,2,3,4','1,2,3','0,1,2,3','2,3,4'],a:1},
+  {q:'Ro‘yxat oxiriga element qo‘shuvchi metod?',o:['add()','insert()','append()','push()'],a:2},
+  {q:'Matnni katta harfga aylantiruvchi metod?',o:['big()','upper()','toUpper()','capital()'],a:1},
+  {q:'Funksiya qaysi kalit so‘z bilan e’lon qilinadi?',o:['func','function','def','define'],a:2},
+  {q:'Funksiyadan qiymat qaytarish uchun?',o:['return','give','output','send'],a:0},
+  {q:'Faylni yozish rejimida ochish kodi?',o:['"r"','"w"','"x"','"read"'],a:1}
+];
+
+const SAMPLES = {
+  'Salom dunyo':'# Birinchi dastur\nprint("Salom, dunyo!")\nprint("Python o\'rganyapman")',
+  'O‘zgaruvchilar':'ism = "Ali"\nyosh = 20\nprint(f"Mening ismim {ism}, yoshim {yosh}")',
+  'Arifmetika':'a = 15\nb = 4\nprint("Yig\'indi:", a + b)\nprint("Bo\'linma:", a / b)\nprint("Qoldiq:", a % b)',
+  'Shart (if)':'yosh = 18\nif yosh >= 18:\n    print("Voyaga yetgan")\nelse:\n    print("Voyaga yetmagan")',
+  'For sikli':'jami = 0\nfor i in range(1, 6):\n    jami += i\n    print("Qadam", i)\nprint("Yig\'indi:", jami)',
+  'Funksiya':'def kvadrat(x):\n    return x * x\n\nfor n in range(1, 5):\n    print(n, "ning kvadrati:", kvadrat(n))'
+};
+
+/* ============================================================
+   SAQLASH (localStorage) — barcha o'zgarishlar saqlanadi
+   ============================================================ */
+const KEY='python_darslik_v1';
+let DB = load();
+function load(){
+  try{return JSON.parse(localStorage.getItem(KEY))||defaults()}
+  catch(e){return defaults()}
+}
+function defaults(){return {done:{}, lastQuiz:null, code:'', visited:'home'}}
+function save(){localStorage.setItem(KEY, JSON.stringify(DB))}
+
+/* ============================================================
+   NAVIGATSIYA
+   ============================================================ */
+const NAV = [
+  {id:'home', ic:'🏠', label:'Bosh sahifa'},
+  {id:'topics', ic:'📚', label:'Mavzular'},
+  {id:'tasks', ic:'✍️', label:'Amaliy topshiriqlar'},
+  {id:'test', ic:'📝', label:'Testlar'},
+  {id:'editor', ic:'💻', label:'Kod yozish'},
+  {id:'guide', ic:'ℹ️', label:'Yo‘riqnoma'}
+];
+function buildNav(){
+  const n=document.getElementById('navList');
+  n.innerHTML='<div class="nav-label">Asosiy</div>'+
+    NAV.map(x=>`<a data-id="${x.id}" onclick="go('${x.id}')"><span class="ic">${x.ic}</span>${x.label}</a>`).join('');
+}
+function setActive(id){
+  document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.dataset.id===id));
+}
+let CURRENT='home';
+function go(id, param){
+  CURRENT=id;
+  setActive(['home','topics','tasks','test','editor','guide'].includes(id)?id:'topics');
+  DB.visited=id; save();
+  const v=document.getElementById('view');
+  v.classList.remove('fade'); void v.offsetWidth; v.classList.add('fade');
+  if(window.innerWidth<=880){closeMenu()}
+  window.scrollTo(0,0);
+  if(id==='home')renderHome();
+  else if(id==='topics')renderTopics();
+  else if(id==='lesson')renderLesson(param);
+  else if(id==='tasks')renderTasks();
+  else if(id==='test')renderTest();
+  else if(id==='editor')renderEditor();
+  else if(id==='guide')renderGuide();
+  updateProgress();
+  setCrumb(id,param);
+}
+function setCrumb(id,param){
+  const c=document.getElementById('crumb');
+  const map={home:'Bosh sahifa',topics:'Mavzular',tasks:'Amaliy topshiriqlar',test:'Testlar',editor:'Kod yozish',guide:'Yo‘riqnoma'};
+  if(id==='lesson'){const t=TOPICS.find(x=>x.id===param);c.innerHTML=`<b>Mavzular</b> › ${t?t.t:''}`}
+  else c.innerHTML=`<b>${map[id]||''}</b>`;
+}
+
+/* ============================================================
+   SAHIFALAR
+   ============================================================ */
+function renderHome(){
+  const doneCount=Object.keys(DB.done).length;
+  document.getElementById('view').innerHTML=`
+  <div class="hero">
+    <h3>Python dasturlash tilini <span class="y">interaktiv</span> o‘rganing</h3>
+    <p>Nazariy ma’lumotlar, kod namunalari, amaliy topshiriqlar va testlar orqali boshlang‘ich bosqichdan Python’ni bosqichma-bosqich o‘zlashtiring.</p>
+    <div class="row">
+      <button class="btn btn-acc" onclick="continueLearning()">▶ ${doneCount>0?'Davom etish':'Boshlash'}</button>
+      <button class="btn btn-gh" onclick="go('test')">📝 Bilimni tekshirish</button>
+    </div>
+  </div>
+  <div class="cards">
+    <div class="card" onclick="go('topics')"><span class="cic">📚</span><h4>Mavzular</h4><p>${TOPICS.length} ta tartibli o‘quv mavzusi</p><span class="badge">${doneCount}/${TOPICS.length}</span></div>
+    <div class="card" onclick="go('tasks')"><span class="cic">✍️</span><h4>Amaliy topshiriqlar</h4><p>Har mavzu bo‘yicha mashqlar</p></div>
+    <div class="card" onclick="go('test')"><span class="cic">📝</span><h4>Testlar</h4><p>${QUIZ.length} ta savol, avtomatik baholash</p>${DB.lastQuiz?`<span class="badge">So‘nggi: ${DB.lastQuiz.pct}%</span>`:''}</div>
+    <div class="card" onclick="go('editor')"><span class="cic">💻</span><h4>Kod yozish</h4><p>Python kodini yozing va tekshiring</p></div>
+    <div class="card" onclick="go('guide')"><span class="cic">ℹ️</span><h4>Yo‘riqnoma</h4><p>Dasturdan foydalanish tartibi</p></div>
+  </div>`;
+}
+function continueLearning(){
+  const next=TOPICS.find(t=>!DB.done[t.id])||TOPICS[0];
+  go('lesson',next.id);
+}
+
+function renderTopics(){
+  document.getElementById('view').innerHTML=`
+  <h2 class="page-title">Mavzular</h2>
+  <p class="page-sub">Python tilining asosiy mavzulari mantiqiy ketma-ketlikda joylashtirilgan. Mavzuni tanlang.</p>
+  <div class="topic-grid">
+    ${TOPICS.map((t,i)=>`
+      <div class="topic-item ${DB.done[t.id]?'done':''}" onclick="go('lesson','${t.id}')">
+        <div class="topic-num">${i+1}</div>
+        <div><h4>${t.t}</h4><small>${t.s}</small></div>
+        <span class="check">✓</span>
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderLesson(id){
+  const i=TOPICS.findIndex(t=>t.id===id);
+  const t=TOPICS[i];
+  if(!t){go('topics');return}
+  const prev=TOPICS[i-1], next=TOPICS[i+1];
+  document.getElementById('view').innerHTML=`
+  <div class="lesson-head">
+    <span class="tn">Mavzu ${i+1}</span>
+    ${DB.done[t.id]?'<span style="color:var(--green);font-size:13px">✓ Yakunlangan</span>':''}
+  </div>
+  <h2 class="page-title">${t.t}</h2>
+  <p class="page-sub">${t.s}</p>
+
+  <div class="sec-tag"><span class="d"></span>Nazariy ma’lumot</div>
+  <div class="theory">${t.theory}</div>
+
+  <div class="sec-tag"><span class="d"></span>Kod namunasi</div>
+  <div class="codeblock">
+    <div class="cb-head">
+      <span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span>
+      <span class="t">misol.py</span>
+      <button class="copy" onclick="copyCode(this)">📋 Nusxa</button>
+    </div>
+    <pre><code>${t.code}</code></pre>
+  </div>
+  <div class="output"><span class="lbl">Natija (Output)</span>${t.out}</div>
+  ${t.note?`<div class="note">💡 ${t.note}</div>`:''}
+
+  <div class="sec-tag"><span class="d"></span>Amaliy topshiriq</div>
+  <div class="task"><span class="qm">🎯</span><div><h5>Mashq</h5><p>${t.task}</p></div></div>
+  <div style="margin-top:14px"><button class="btn btn-gh" onclick="openInEditor('${t.id}')">💻 Kod yozish bo‘limida bajarish</button></div>
+
+  <div class="lesson-foot">
+    <button class="btn ${DB.done[t.id]?'btn-gh':'btn-acc'}" onclick="toggleDone('${t.id}')">
+      ${DB.done[t.id]?'↺ Yakunlangan belgisini olib tashlash':'✓ Mavzuni yakunladim'}
+    </button>
+    <div class="lesson-nav">
+      ${prev?`<button class="btn btn-gh" onclick="go('lesson','${prev.id}')">← Oldingi</button>`:''}
+      ${next?`<button class="btn btn-pri" onclick="go('lesson','${next.id}')">Keyingi →</button>`:`<button class="btn btn-pri" onclick="go('test')">Testga o‘tish →</button>`}
+    </div>
+  </div>`;
+}
+function toggleDone(id){
+  if(DB.done[id])delete DB.done[id]; else DB.done[id]=Date.now();
+  save(); updateProgress(); renderLesson(id);
+  toast(DB.done[id]?'Mavzu yakunlandi! 🎉':'Belgi olib tashlandi');
+}
+function copyCode(btn){
+  const txt=btn.closest('.codeblock').querySelector('code').innerText;
+  navigator.clipboard?.writeText(txt);
+  btn.textContent='✓ Nusxalandi'; setTimeout(()=>btn.textContent='📋 Nusxa',1500);
+}
+
+function renderTasks(){
+  document.getElementById('view').innerHTML=`
+  <h2 class="page-title">Amaliy topshiriqlar</h2>
+  <p class="page-sub">Har bir mavzu bo‘yicha mustaqil bajarish uchun mashqlar. Topshiriqni "Kod yozish" bo‘limida sinab ko‘ring.</p>
+  ${TOPICS.map((t,i)=>`
+    <div class="task" style="align-items:center">
+      <span class="qm">${DB.done[t.id]?'✅':'🎯'}</span>
+      <div style="flex:1"><h5>${i+1}. ${t.t}</h5><p>${t.task}</p></div>
+      <button class="btn btn-gh" onclick="openInEditor('${t.id}')">Bajarish →</button>
+    </div>`).join('')}`;
+}
+
+/* ===== TEST ===== */
+let answers={};
+function renderTest(){
+  answers={};
+  document.getElementById('view').innerHTML=`
+  <h2 class="page-title">Testlar</h2>
+  <p class="page-sub">Quyidagi ${QUIZ.length} ta savolga javob bering. Yakunda natijangiz avtomatik hisoblanadi.</p>
+  ${DB.lastQuiz?`<div class="test-intro">📊 So‘nggi natijangiz: <b>${DB.lastQuiz.correct}/${DB.lastQuiz.total}</b> (${DB.lastQuiz.pct}%) — ${DB.lastQuiz.date}</div>`:''}
+  <div id="quizArea">
+  ${QUIZ.map((q,qi)=>`
+    <div class="quiz-q" data-q="${qi}">
+      <div class="qn">SAVOL ${qi+1}</div>
+      <div class="qt">${q.q}</div>
+      ${q.o.map((op,oi)=>`
+        <div class="opt" onclick="pick(${qi},${oi})" data-opt="${oi}">
+          <span class="rd"></span>${op}<span class="mk"></span>
+        </div>`).join('')}
+    </div>`).join('')}
+  </div>
+  <button class="btn btn-acc" style="margin-top:6px" onclick="submitQuiz()">Natijani hisoblash</button>`;
+}
+function pick(qi,oi){
+  answers[qi]=oi;
+  document.querySelectorAll(`.quiz-q[data-q="${qi}"] .opt`).forEach(o=>o.classList.toggle('sel',+o.dataset.opt===oi));
+}
+function submitQuiz(){
+  if(Object.keys(answers).length<QUIZ.length){
+    toast('Iltimos, barcha savollarga javob bering ('+Object.keys(answers).length+'/'+QUIZ.length+')');
+    return;
+  }
+  let correct=0;
+  QUIZ.forEach((q,qi)=>{
+    const opts=document.querySelectorAll(`.quiz-q[data-q="${qi}"] .opt`);
+    opts.forEach(o=>{
+      const oi=+o.dataset.opt;
+      o.style.pointerEvents='none';
+      if(oi===q.a){o.classList.add('correct');o.querySelector('.mk').textContent='✓'}
+      else if(answers[qi]===oi){o.classList.add('wrong');o.querySelector('.mk').textContent='✕'}
+    });
+    if(answers[qi]===q.a)correct++;
+  });
+  const pct=Math.round(correct/QUIZ.length*100);
+  DB.lastQuiz={correct,total:QUIZ.length,pct,date:new Date().toLocaleString('uz')};
+  save();
+  showResult(correct,pct);
+}
+function showResult(correct,pct){
+  let msg,col;
+  if(pct>=90){msg='A’lo! Ajoyib natija 🏆';col='var(--green)'}
+  else if(pct>=70){msg='Yaxshi! Davom eting 👍';col='var(--py-blue)'}
+  else if(pct>=50){msg='Qoniqarli. Takrorlash foydali 📖';col='var(--py-yellow)'}
+  else {msg='Mavzularni qayta o‘rganishni tavsiya etamiz 🔄';col='var(--red)'}
+  const circ=2*Math.PI*65, off=circ-(pct/100)*circ;
+  const html=`
+  <div class="result-card">
+    <div class="ring">
+      <svg width="150" height="150">
+        <circle cx="75" cy="75" r="65" stroke="var(--line)" stroke-width="12" fill="none"/>
+        <circle cx="75" cy="75" r="65" stroke="${col}" stroke-width="12" fill="none" stroke-linecap="round"
+          stroke-dasharray="${circ}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset 1s ease"/>
+      </svg>
+      <div class="pct"><b style="color:${col}">${pct}%</b><span>o‘zlashtirish</span></div>
+    </div>
+    <div class="res-msg">${msg}</div>
+    <div class="res-stats">
+      <div><b style="color:var(--green)">${correct}</b><small>To‘g‘ri</small></div>
+      <div><b style="color:var(--red)">${QUIZ.length-correct}</b><small>Xato</small></div>
+      <div><b>${QUIZ.length}</b><small>Jami savol</small></div>
+    </div>
+    <div style="margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-pri" onclick="renderTest()">↻ Qayta ishlash</button>
+      ${pct<70?'<button class="btn btn-gh" onclick="go(\'topics\')">📚 Mavzularni takrorlash</button>':'<button class="btn btn-acc" onclick="go(\'editor\')">💻 Amaliyot qilish</button>'}
+    </div>
+  </div>`;
+  const area=document.getElementById('view');
+  area.insertAdjacentHTML('afterbegin',html);
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast(`Natija: ${correct}/${QUIZ.length} (${pct}%)`);
+}
+
+/* ===== KOD YOZISH (haqiqiy Python — Pyodide) ===== */
+let PYODIDE=null, PY_LOADING=false;
+function renderEditor(){
+  document.getElementById('view').innerHTML=`
+  <h2 class="page-title">Kod yozish</h2>
+  <p class="page-sub">Python kodini yozing va "Ishga tushirish" tugmasini bosing. Kod haqiqiy Python muhitida bajariladi. Kodingiz avtomatik saqlanadi.</p>
+  <div class="ed-toolbar">
+    <button class="btn btn-acc" id="runBtn" onclick="runCode()">▶ Ishga tushirish</button>
+    <button class="btn btn-gh" onclick="clearCode()">🗑 Tozalash</button>
+    <select class="sample-pick" onchange="loadSample(this.value)">
+      <option value="">— Namuna tanlash —</option>
+      ${Object.keys(SAMPLES).map(k=>`<option value="${k}">${k}</option>`).join('')}
+    </select>
+    <span id="pyStatus" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+  <div class="editor-wrap">
+    <div class="ed-panel">
+      <div class="ph"><span class="dot" style="width:9px;height:9px;border-radius:50%;background:#febc2e;display:inline-block"></span> kod.py</div>
+      <textarea id="codeArea" spellcheck="false" placeholder="# Python kodingizni shu yerga yozing&#10;print('Salom!')" oninput="DB.code=this.value;save()">${escapeHtml(DB.code||'')}</textarea>
+    </div>
+    <div class="ed-panel">
+      <div class="ph"><span>▶ Natija (konsol)</span></div>
+      <div class="ed-out" id="codeOut"><span style="color:var(--muted)">Natija shu yerda ko‘rinadi...</span></div>
+    </div>
+  </div>
+  <div class="note" style="margin-top:16px">💡 Ushbu bo‘lim to‘liq Python’ni brauzerda bajaradi (print, o‘zgaruvchilar, sikllar, funksiyalar, ro‘yxatlar, input() va h.k.). Birinchi ishga tushirishda Python muhiti yuklanadi — internet aloqasi talab qilinadi.</div>`;
+  // Pyodide'ni fonda oldindan yuklab qo'yamiz
+  ensurePyodide();
+}
+function loadSample(k){if(!k)return;document.getElementById('codeArea').value=SAMPLES[k];DB.code=SAMPLES[k];save()}
+function clearCode(){document.getElementById('codeArea').value='';DB.code='';save();document.getElementById('codeOut').innerHTML='<span style="color:var(--muted)">Tozalandi.</span>'}
+function openInEditor(id){
+  const t=TOPICS.find(x=>x.id===id);
+  go('editor');
+  setTimeout(()=>{
+    const starter=`# Topshiriq: ${t.task}\n# Kodingizni shu yerga yozing\n\n`;
+    document.getElementById('codeArea').value=starter;
+    DB.code=starter;save();
+  },60);
+}
+function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function setPyStatus(t){const el=document.getElementById('pyStatus');if(el)el.textContent=t}
+function ensurePyodide(){
+  if(PYODIDE||PY_LOADING)return;
+  PY_LOADING=true;
+  setPyStatus('⏳ Python muhiti yuklanmoqda...');
+  // pyodide.js skriptini yuklash
+  if(!window.loadPyodide){
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';
+    s.onload=initPyodide;
+    s.onerror=()=>{PY_LOADING=false;setPyStatus('⚠️ Yuklab bo‘lmadi (internetni tekshiring)')};
+    document.head.appendChild(s);
+  }else initPyodide();
+}
+async function initPyodide(){
+  try{
+    PYODIDE=await loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/'});
+    setPyStatus('✅ Python tayyor');
+  }catch(e){
+    setPyStatus('⚠️ Xatolik: '+e.message);
+  }finally{PY_LOADING=false}
+}
+
+async function runCode(){
+  const code=document.getElementById('codeArea').value;
+  const out=document.getElementById('codeOut');
+  const btn=document.getElementById('runBtn');
+  if(!code.trim()){out.innerHTML='<span style="color:var(--muted)">Kod bo‘sh.</span>';return}
+  if(!PYODIDE){
+    out.innerHTML='<span style="color:var(--muted)">⏳ Python muhiti yuklanmoqda, biroz kuting...</span>';
+    ensurePyodide();
+    // tayyor bo'lguncha kutamiz
+    let tries=0;
+    while(!PYODIDE && tries<120){await new Promise(r=>setTimeout(r,500));tries++}
+    if(!PYODIDE){out.innerHTML='<span class="err">Python muhitini yuklab bo‘lmadi. Internet aloqasini tekshiring.</span>';return}
+  }
+  btn.disabled=true;const old=btn.textContent;btn.textContent='⏳ Bajarilmoqda...';
+  out.innerHTML='<span style="color:var(--muted)">Bajarilmoqda...</span>';
+  try{
+    // input() ni brauzer prompt'iga ulaymiz, stdout/stderr ni yig'amiz
+    PYODIDE.setStdin({stdin:()=>{const r=window.prompt('input() — qiymat kiriting:');return r===null?'':r}});
+    let buf='';
+    PYODIDE.setStdout({batched:(t)=>{buf+=t+'\n'}});
+    PYODIDE.setStderr({batched:(t)=>{buf+=t+'\n'}});
+    await PYODIDE.runPythonAsync(code);
+    out.innerHTML = buf.trim().length ? escapeHtml(buf.replace(/\n$/,'')) : '<span style="color:var(--muted)">(natija yo‘q — print() ishlating)</span>';
+  }catch(e){
+    // Python xatosini toza ko'rinishda chiqaramiz
+    let msg=String(e.message||e);
+    const idx=msg.indexOf('File "<exec>"');
+    if(idx>-1)msg=msg.slice(idx);
+    out.innerHTML='<span class="err">'+escapeHtml(msg)+'</span>';
+  }finally{
+    btn.disabled=false;btn.textContent=old;
+  }
+}
+
+function renderGuide(){
+  document.getElementById('view').innerHTML=`
+  <h2 class="page-title">Foydalanish yo‘riqnomasi</h2>
+  <p class="page-sub">Dasturdan samarali foydalanish bo‘yicha qisqa qo‘llanma.</p>
+  ${[
+    ['Mavzularni o‘rganing','"Mavzular" bo‘limidan boshlang. Har bir mavzuda nazariy ma’lumot, kod namunasi va uning natijasi berilgan. Mavzularni tartib bilan o‘rganing.'],
+    ['Kod namunalarini tahlil qiling','Har bir mavzuda Python kodi va uning natijasi (Output) ko‘rsatilgan. "Nusxa" tugmasi orqali kodni nusxalab, "Kod yozish" bo‘limida sinab ko‘ring.'],
+    ['Amaliy topshiriqlarni bajaring','Har mavzu oxirida amaliy mashq bor. "Kod yozish bo‘limida bajarish" tugmasi sizni kod muharririga olib o‘tadi.'],
+    ['Mavzuni yakunlang','Mavzuni o‘rganib bo‘lgach "✓ Mavzuni yakunladim" tugmasini bosing. O‘zlashtirish darajangiz chap panelda kuzatiladi.'],
+    ['Testdan o‘ting','"Testlar" bo‘limida barcha savollarga javob bering. Dastur natijani avtomatik hisoblab, to‘g‘ri va xato javoblarni ko‘rsatadi.'],
+    ['Natijani baholang','Test yakunida o‘zlashtirish foizi chiqadi. Natija 70% dan past bo‘lsa, mavzularni qayta o‘rganish tavsiya etiladi.']
+  ].map((g,i)=>`<div class="guide-step"><div class="gnum">${i+1}</div><div><h4>${g[0]}</h4><p>${g[1]}</p></div></div>`).join('')}
+  <div class="test-intro" style="margin-top:20px">
+    <b>💾 Ma’lumotlar saqlanishi:</b> Sizning barcha o‘zgarishlaringiz — yakunlangan mavzular, test natijalari va yozilgan kod — brauzer xotirasida (localStorage) avtomatik saqlanadi. Dasturni qayta ochganingizda hammasi joyida turadi. Tozalash uchun yuqoridagi "↺ Tozalash" tugmasidan foydalaning.
+  </div>`;
+}
+
+/* ============================================================
+   YORDAMCHI
+   ============================================================ */
+function updateProgress(){
+  const done=Object.keys(DB.done).length, total=TOPICS.length;
+  const pct=Math.round(done/total*100);
+  document.getElementById('progPct').textContent=pct+'%';
+  document.getElementById('progBar').style.width=pct+'%';
+  document.getElementById('progTxt').textContent=`${done} / ${total} mavzu yakunlandi`;
+}
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);
+}
+function resetAll(){
+  if(confirm('Barcha saqlangan ma’lumotlar (yakunlangan mavzular, test natijalari, kod) o‘chiriladi. Davom etasizmi?')){
+    localStorage.removeItem(KEY);DB=defaults();save();go('home');toast('Barcha ma’lumotlar tozalandi');
+  }
+}
+function toggleMenu(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('open')}
+function closeMenu(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('open')}
+
+/* INIT */
+buildNav();
+go(DB.visited&&['home','topics','tasks','test','editor','guide'].includes(DB.visited)?DB.visited:'home');
+</script>
+</body>
+</html>
